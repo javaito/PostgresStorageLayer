@@ -71,33 +71,17 @@ public class PostgresStorageSession extends StorageSession {
         }
     }
 
+    /**
+     * Return the select (postgres implementation) instance associated to the query parameter.
+     * @param query Query parameter.
+     * @return Select instance.
+     * @throws StorageAccessException
+     */
     @Override
     public Select select(Query query) throws StorageAccessException {
-        return new PostgresSelect(this);
+        Select select = new PostgresSelect(this);
+        select.setQuery(query);
+        return select;
     }
 
-    @Override
-    public Insert insert(Object storableObject) throws StorageAccessException {
-        return super.insert(storableObject);
-    }
-
-    @Override
-    public Insert insert() throws StorageAccessException {
-        return super.insert();
-    }
-
-    @Override
-    public Update update(Object storableObject) throws StorageAccessException {
-        return super.update(storableObject);
-    }
-
-    @Override
-    public Update update() throws StorageAccessException {
-        return super.update();
-    }
-
-    @Override
-    public Delete delete(String storageName) throws StorageAccessException {
-        return super.delete(storageName);
-    }
 }

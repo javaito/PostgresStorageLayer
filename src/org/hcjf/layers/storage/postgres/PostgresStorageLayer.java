@@ -11,37 +11,45 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
+ * Base layer to create a pooling connection with a postgres data base engine.
  * @author Javier Quiroga.
  * @email javier.quiroga@sitrack.com
  */
 public abstract class PostgresStorageLayer extends StorageLayer<PostgresStorageSession> {
 
-    private final PGPoolingDataSource source;
+    private PGPoolingDataSource source;
 
     public PostgresStorageLayer(String implName) {
         super(implName);
-
-        source = new PGPoolingDataSource();
-        source.setDataSourceName(getDataSourceName());
-        source.setServerName(getServerName());
-        source.setDatabaseName(getDatabaseName());
-        source.setUser(getUserName());
-        source.setPassword(getPassword());
-        source.setInitialConnections(getInitialConnections());
-        source.setMaxConnections(getMaxConnections());
-        source.setPortNumber(getPortNumber());
-
-        try {
-            Connection connection = source.getConnection();
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
     }
 
+    /**
+     * The first time this method creates a postgres pooling data source, then
+     * only return a session with a postgres connection.
+     * @return Postgres storage session.
+     */
     @Override
     public PostgresStorageSession begin() {
+        synchronized (this) {
+            if(source == null) {
+                source = new PGPoolingDataSource();
+                source.setDataSourceName(getDataSourceName());
+                source.setServerName(getServerName());
+                source.setDatabaseName(getDatabaseName());
+                source.setUser(getUserName());
+                source.setPassword(getPassword());
+                source.setInitialConnections(getInitialConnections());
+                source.setMaxConnections(getMaxConnections());
+                source.setPortNumber(getPortNumber());
+
+                try {
+                    Connection connection = source.getConnection();
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
         try {
             Connection connection = source.getConnection();
             connection.setAutoCommit(false);
@@ -53,20 +61,52 @@ public abstract class PostgresStorageLayer extends StorageLayer<PostgresStorageS
         }
     }
 
+    /**
+     * Return a name for a data source.
+     * @return Data source name.
+     */
     protected abstract String getDataSourceName();
 
+    /**
+     * Return the host of the data base engine.
+     * @return Data base engine host.
+     */
     protected abstract String getServerName();
 
+    /**
+     * Return the data base name.
+     * @return Data base name.
+     */
     protected abstract String getDatabaseName();
 
+    /**
+     * Return the user name.
+     * @return User name.
+     */
     protected abstract String getUserName();
 
+    /**
+     * Return the password.
+     * @return Password.
+     */
     protected abstract String getPassword();
 
+    /**
+     * Return the initial connection size for the pool.
+     * @return Initial connection size.
+     */
     protected abstract Integer getInitialConnections();
 
+    /**
+     * Return the max connection size for the pool.
+     * @return Max connection size.
+     */
     protected abstract Integer getMaxConnections();
 
+    /**
+     * Return the port number of the server.
+     * @return Port number.
+     */
     protected abstract Integer getPortNumber();
 
 }
