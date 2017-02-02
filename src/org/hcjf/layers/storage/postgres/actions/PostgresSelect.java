@@ -45,13 +45,14 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SELECT)).append(Strings.WHITE_SPACE);
             String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
             String argumentSeparator = Strings.EMPTY_STRING;
-            for(String returnFields : query.getReturnFields()) {
-                queryBuilder.append(normalizeApplicationToDataSource(returnFields));
-                queryBuilder.append(argumentSeparator).append(Strings.WHITE_SPACE);
+            for(Query.QueryField queryField : query.getReturnFields()) {
+                queryBuilder.append(argumentSeparator);
+                queryBuilder.append(normalizeApplicationToDataSource(queryField));
+                queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = argumentSeparatorValue;
             }
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.FROM)).append(Strings.WHITE_SPACE);
-            queryBuilder.append(normalizeApplicationToDataSource(query.getResourceName())).append(Strings.WHITE_SPACE);
+            queryBuilder.append(normalizeApplicationToDataSource(query.getResource())).append(Strings.WHITE_SPACE);
             if(query.getEvaluators().size() > 0) {
                 queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.WHERE));
                 queryBuilder.append(Strings.WHITE_SPACE);
@@ -63,12 +64,12 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.ORDER_BY));
                 queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = Strings.EMPTY_STRING;
-                for (String orderFields : query.getOrderFields()) {
-                    queryBuilder.append(normalizeApplicationToDataSource(orderFields)).append(argumentSeparator).append(Strings.WHITE_SPACE);
+                for (Query.OrderField orderField : query.getOrderFields()) {
+                    queryBuilder.append(normalizeApplicationToDataSource(orderField.getQueryField())).append(argumentSeparator).append(Strings.WHITE_SPACE);
+                    if(orderField.isDesc()) {
+                        queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC)).append(Strings.WHITE_SPACE);
+                    }
                     argumentSeparator = argumentSeparatorValue;
-                }
-                if(query.isDesc()) {
-                    queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC)).append(Strings.WHITE_SPACE);
                 }
             }
 
@@ -87,7 +88,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 while (sqlResultSet.next()) {
                     Map<String, Object> mapResult = new HashMap<>();
                     for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
-                        mapResult.put(normalizeDataSourceToApplication(resultSetMetaData.getColumnLabel(columnNumber)),
+                        mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(resultSetMetaData.getColumnLabel(columnNumber))).toString(),
                                 sqlResultSet.getObject(columnNumber));
                     }
                     collectionResult.add(mapResult);
@@ -100,7 +101,8 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     Object object = getResultType().newInstance();
                     for(String setterName : setters.keySet()) {
                         try {
-                            int index = sqlResultSet.findColumn(normalizeApplicationToDataSource(setterName));
+                            int index = sqlResultSet.findColumn(
+                                    normalizeApplicationToDataSource(new Query.QueryField(setterName)).toString());
                             setters.get(setterName).invoke(object, sqlResultSet.getObject(index));
                         } catch (Exception ex){}
                     }
@@ -138,7 +140,8 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 processEvaluators(result, (And)evaluator);
                 result.append(Strings.END_GROUP);
             } else if(evaluator instanceof FieldEvaluator) {
-                result.append(normalizeApplicationToDataSource(((FieldEvaluator)evaluator).getCompleteName())).append(Strings.WHITE_SPACE);
+                result.append(normalizeApplicationToDataSource(
+                        ((FieldEvaluator)evaluator).getQueryField())).append(Strings.WHITE_SPACE);
                 if(evaluator instanceof Distinct) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DISTINCT));
                 } else if(evaluator instanceof Equals) {
