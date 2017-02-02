@@ -57,7 +57,9 @@ public class PostgresStorageSession extends StorageSession {
     public void close() throws IOException {
         try {
             if(throwable != null) {
-                getConnection().rollback();
+                try {
+                    getConnection().rollback();
+                } catch (Exception ex) {}
                 Log.w(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
                         Errors.getError(Errors.ROLLBACK_OPERATION), throwable);
             } else {
