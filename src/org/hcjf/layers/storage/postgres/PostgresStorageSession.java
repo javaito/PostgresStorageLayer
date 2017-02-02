@@ -63,7 +63,9 @@ public class PostgresStorageSession extends StorageSession {
                 Log.w(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
                         Errors.getError(Errors.ROLLBACK_OPERATION), throwable);
             } else {
-                getConnection().commit();
+                try {
+                    getConnection().commit();
+                } catch (Exception ex){}
             }
             getConnection().close();
         } catch (SQLException ex) {
