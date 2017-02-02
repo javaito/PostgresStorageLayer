@@ -125,12 +125,14 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
      * @return Query builder.
      */
     private StringBuilder processEvaluators(StringBuilder result, EvaluatorCollection collection) {
-        String separator = Strings.EMPTY_STRING;
         String separatorValue = collection instanceof Or ?
                 SystemProperties.get(SystemProperties.Query.ReservedWord.OR) :
                 SystemProperties.get(SystemProperties.Query.ReservedWord.AND);
+        boolean addSeparator = false;
         for(Evaluator evaluator : collection.getEvaluators()) {
-            result.append(separator);
+            if(addSeparator) {
+                result.append(Strings.WHITE_SPACE).append(separatorValue).append(Strings.WHITE_SPACE);
+            }
             if(evaluator instanceof Or) {
                 result.append(Strings.START_GROUP);
                 processEvaluators(result, (Or)evaluator);
@@ -163,7 +165,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 }
                 result.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
             }
-            separator = separatorValue;
+            addSeparator = true;
         }
         return result;
     }
