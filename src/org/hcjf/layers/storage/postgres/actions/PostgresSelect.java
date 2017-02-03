@@ -12,10 +12,10 @@ import org.hcjf.properties.SystemProperties;
 import org.hcjf.utils.Introspection;
 import org.hcjf.utils.Strings;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.math.BigDecimal;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 /**
  * Select implementation for postgres database.
@@ -83,13 +83,20 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             ResultSetMetaData resultSetMetaData = sqlResultSet.getMetaData();
 
             R resultSet = null;
+            Object columnValue;
             if(getResultType() == null) {
                 List<Map<String, Object>> collectionResult = new ArrayList<>();
                 while (sqlResultSet.next()) {
                     Map<String, Object> mapResult = new HashMap<>();
                     for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
+                        columnValue = sqlResultSet.getObject(columnNumber);
+                        if(columnValue instanceof Array) {
+                            columnValue = Arrays.asList((Object[])((Array)columnValue).getArray());
+                        } else if(columnValue instanceof BigDecimal) {
+                            columnValue = ((BigDecimal)columnValue).doubleValue();
+                        }
                         mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(resultSetMetaData.getColumnLabel(columnNumber))).toString(),
-                                sqlResultSet.getObject(columnNumber));
+                                columnValue);
                     }
                     collectionResult.add(mapResult);
                 }
@@ -179,6 +186,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
      * @return Prepared statement.
      */
     private PreparedStatement setValues(PreparedStatement statement, EvaluatorCollection collection, Integer index, Object... params) {
+        Object value;
         for(Evaluator evaluator : collection.getEvaluators()) {
             if(evaluator instanceof Or) {
                 statement = setValues(statement, (Or)evaluator, index, params);
@@ -186,7 +194,12 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 statement = setValues(statement, (And)evaluator, index, params);
             } else if(evaluator instanceof FieldEvaluator) {
                 try {
-                    statement.setObject(index++, ((FieldEvaluator)evaluator).getValue(params));
+                    value = ((FieldEvaluator)evaluator).getValue(params);
+                    if(value instanceof Date) {
+                        statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
+                    } else {
+                        statement.setObject(index++, value);
+                    }
                 } catch (SQLException ex) {
                     throw new IllegalArgumentException(ex);
                 }
