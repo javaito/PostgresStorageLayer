@@ -79,50 +79,62 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
 
             PreparedStatement preparedStatement = getSession().getConnection().prepareStatement(queryBuilder.toString());
             preparedStatement = setValues(preparedStatement, query, 1, params);
-            java.sql.ResultSet sqlResultSet = preparedStatement.executeQuery();
-            ResultSetMetaData resultSetMetaData = sqlResultSet.getMetaData();
-
-            R resultSet = null;
-            Object columnValue;
-            if(getResultType() == null) {
-                List<Map<String, Object>> collectionResult = new ArrayList<>();
-                while (sqlResultSet.next()) {
-                    Map<String, Object> mapResult = new HashMap<>();
-                    for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
-                        columnValue = sqlResultSet.getObject(columnNumber);
-                        if(columnValue instanceof Array) {
-                            columnValue = Arrays.asList((Object[])((Array)columnValue).getArray());
-                        } else if(columnValue instanceof BigDecimal) {
-                            columnValue = ((BigDecimal)columnValue).doubleValue();
-                        }
-                        mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(resultSetMetaData.getColumnLabel(columnNumber))).toString(),
-                                columnValue);
-                    }
-                    collectionResult.add(mapResult);
-                }
-                resultSet = (R) new MapResultSet(collectionResult);
-            } else {
-                Collection<Object> collectionResult = new ArrayList<>();
-                Map<String, Introspection.Setter> setters = Introspection.getSetters(getResultType());
-                while (sqlResultSet.next()) {
-                    Object object = getResultType().newInstance();
-                    for(String setterName : setters.keySet()) {
-                        try {
-                            int index = sqlResultSet.findColumn(
-                                    normalizeApplicationToDataSource(new Query.QueryField(setterName)).toString());
-                            setters.get(setterName).invoke(object, sqlResultSet.getObject(index));
-                        } catch (Exception ex){}
-                    }
-                    collectionResult.add(object);
-                }
-                resultSet = (R) new CollectionResultSet(collectionResult);
-            }
-
-            return resultSet;
+            return createResultSet(preparedStatement.executeQuery());
         } catch (Exception ex) {
             getSession().onError(ex);
             throw new StorageAccessException(ex);
         }
+    }
+
+    /**
+     *
+     * @param sqlResultSet
+     * @param <R>
+     * @return
+     * @throws SQLException
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     */
+    protected final <R extends ResultSet> R createResultSet(java.sql.ResultSet sqlResultSet)
+            throws SQLException, IllegalAccessException, InstantiationException {
+        ResultSetMetaData resultSetMetaData = sqlResultSet.getMetaData();
+        R resultSet = null;
+        Object columnValue;
+        if(getResultType() == null) {
+            List<Map<String, Object>> collectionResult = new ArrayList<>();
+            while (sqlResultSet.next()) {
+                Map<String, Object> mapResult = new HashMap<>();
+                for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
+                    columnValue = sqlResultSet.getObject(columnNumber);
+                    if(columnValue instanceof Array) {
+                        columnValue = Arrays.asList((Object[])((Array)columnValue).getArray());
+                    } else if(columnValue instanceof BigDecimal) {
+                        columnValue = ((BigDecimal)columnValue).doubleValue();
+                    }
+                    mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(resultSetMetaData.getColumnLabel(columnNumber))).toString(),
+                            columnValue);
+                }
+                collectionResult.add(mapResult);
+            }
+            resultSet = (R) new MapResultSet(collectionResult);
+        } else {
+            Collection<Object> collectionResult = new ArrayList<>();
+            Map<String, Introspection.Setter> setters = Introspection.getSetters(getResultType());
+            while (sqlResultSet.next()) {
+                Object object = getResultType().newInstance();
+                for(String setterName : setters.keySet()) {
+                    try {
+                        int index = sqlResultSet.findColumn(
+                                normalizeApplicationToDataSource(new Query.QueryField(setterName)).toString());
+                        setters.get(setterName).invoke(object, sqlResultSet.getObject(index));
+                    } catch (Exception ex){}
+                }
+                collectionResult.add(object);
+            }
+            resultSet = (R) new CollectionResultSet(collectionResult);
+        }
+
+        return resultSet;
     }
 
     /**
@@ -194,7 +206,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 statement = setValues(statement, (And)evaluator, index, params);
             } else if(evaluator instanceof FieldEvaluator) {
                 try {
-                    value = ((FieldEvaluator)evaluator).getValue(params);
+                    value = ((FieldEvaluator)evaluator).getRawValue();
                     if(value instanceof Date) {
                         statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
                     } else {

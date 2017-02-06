@@ -15,7 +15,7 @@ import java.sql.SQLException;
  * @author Javier Quiroga.
  * @email javier.quiroga@sitrack.com
  */
-public abstract class PostgresStorageLayer extends StorageLayer<PostgresStorageSession> {
+public abstract class PostgresStorageLayer<S extends PostgresStorageSession> extends StorageLayer<S> {
 
     private PGPoolingDataSource source;
 
@@ -29,7 +29,7 @@ public abstract class PostgresStorageLayer extends StorageLayer<PostgresStorageS
      * @return Postgres storage session.
      */
     @Override
-    public PostgresStorageSession begin() {
+    public S begin() {
         synchronized (this) {
             if(source == null) {
                 source = new PGPoolingDataSource();
@@ -53,13 +53,15 @@ public abstract class PostgresStorageLayer extends StorageLayer<PostgresStorageS
         try {
             Connection connection = source.getConnection();
             connection.setAutoCommit(false);
-            return new PostgresStorageSession(getImplName(), connection);
+            return getSessionInstance(getImplName(), connection);
         } catch (SQLException ex) {
             Log.e(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
                     Errors.getError(Errors.UNABLE_TO_CREATE_CONNECTION), ex);
             throw new RuntimeException(Errors.getError(Errors.UNABLE_TO_CREATE_CONNECTION), ex);
         }
     }
+
+    protected abstract S getSessionInstance(String implName, Connection connection);
 
     /**
      * Return a name for a data source.
