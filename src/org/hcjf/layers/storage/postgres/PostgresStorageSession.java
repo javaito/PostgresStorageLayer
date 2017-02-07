@@ -1,23 +1,24 @@
 package org.hcjf.layers.storage.postgres;
 
+import org.hcjf.layers.query.JoinableMap;
 import org.hcjf.layers.query.Query;
 import org.hcjf.layers.storage.StorageAccessException;
 import org.hcjf.layers.storage.StorageSession;
 import org.hcjf.layers.storage.actions.*;
+import org.hcjf.layers.storage.actions.ResultSet;
 import org.hcjf.layers.storage.postgres.actions.PostgresSelect;
 import org.hcjf.layers.storage.postgres.errors.Errors;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.log.Log;
 import org.hcjf.properties.SystemProperties;
 import org.hcjf.utils.Introspection;
+import org.hcjf.utils.Strings;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.Array;
-import java.sql.Connection;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 
 /**
  * This class implements the postgres session.
@@ -75,6 +76,74 @@ public class PostgresStorageSession extends StorageSession {
                     Errors.getError(Errors.UNABLE_TO_CLOSE_CONNECTION), ex);
             throw new IOException(Errors.getError(Errors.UNABLE_TO_CLOSE_CONNECTION), ex);
         }
+    }
+
+    /**
+     *
+     * @param sqlResultSet
+     * @param <R>
+     * @return
+     * @throws SQLException
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     */
+    public <R extends ResultSet> R createResultSet(Query query, java.sql.ResultSet sqlResultSet, Class resultType)
+            throws SQLException, IllegalAccessException, InstantiationException {
+        ResultSetMetaData resultSetMetaData = sqlResultSet.getMetaData();
+        R resultSet = null;
+        Object columnValue;
+        if(resultType == null) {
+            List<Map<String, Object>> collectionResult = new ArrayList<>();
+            while (sqlResultSet.next()) {
+                JoinableMap mapResult = new JoinableMap();
+                for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
+                    mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(
+                            resultSetMetaData.getTableName(columnNumber) +
+                                    Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber))).toString(),
+                            getValueFromColumn(sqlResultSet.getObject(columnNumber)));
+                }
+                collectionResult.add(mapResult);
+            }
+            resultSet = (R) new MapResultSet(collectionResult);
+        } else {
+            Collection<Object> collectionResult = new ArrayList<>();
+            Map<String, Introspection.Setter> setters = Introspection.getSetters(resultType);
+            while (sqlResultSet.next()) {
+                Object object = resultType.newInstance();
+                for(String setterName : setters.keySet()) {
+                    try {
+                        int index = sqlResultSet.findColumn(
+                                normalizeApplicationToDataSource(new Query.QueryField(
+                                        resultType.getSimpleName() + Strings.CLASS_SEPARATOR + setterName)).toString());
+                        setters.get(setterName).invoke(object, getValueFromColumn(sqlResultSet.getObject(index)));
+                    } catch (Exception ex){}
+                }
+                collectionResult.add(object);
+            }
+            resultSet = (R) new CollectionResultSet(collectionResult);
+        }
+
+        return resultSet;
+    }
+
+    /**
+     *
+     * @param columnValue
+     * @return
+     * @throws SQLException
+     */
+    protected Object getValueFromColumn(Object columnValue) throws SQLException {
+        Object result = columnValue;
+        if(columnValue != null) {
+            if (columnValue instanceof Array) {
+                result = Arrays.asList((Object[]) ((Array) columnValue).getArray());
+            } else if (columnValue instanceof BigDecimal) {
+                result = ((BigDecimal) columnValue).doubleValue();
+            } else if (columnValue instanceof Timestamp) {
+                result = new Date(((Timestamp) columnValue).getTime());
+            }
+        }
+        return result;
     }
 
     /**
