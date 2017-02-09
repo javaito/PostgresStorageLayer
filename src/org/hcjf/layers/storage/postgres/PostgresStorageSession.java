@@ -99,13 +99,13 @@ public class PostgresStorageSession extends StorageSession {
         if(resultType == null) {
             List<Map<String, Object>> collectionResult = new ArrayList<>();
             while (sqlResultSet.next()) {
-                JoinableMap mapResult = new JoinableMap();
+                JoinableMap mapResult = new JoinableMap(query.getResourceName());
                 for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
                     Query.QueryComponent queryField = normalizeDataSourceToApplication(new Query.QueryField(
                             resultSetMetaData.getTableName(columnNumber) +
                                     Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber)));
                     if(queryField != null) {
-                        mapResult.put(queryField.toString(),
+                        mapResult.put(query.getResourceName() + Strings.CLASS_SEPARATOR + queryField.toString(),
                                 getValueFromColumn(sqlResultSet.getObject(columnNumber)));
                     }
                 }
