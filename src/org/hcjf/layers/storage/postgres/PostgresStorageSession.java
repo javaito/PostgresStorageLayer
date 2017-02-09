@@ -4,8 +4,10 @@ import org.hcjf.layers.query.JoinableMap;
 import org.hcjf.layers.query.Query;
 import org.hcjf.layers.storage.StorageAccessException;
 import org.hcjf.layers.storage.StorageSession;
-import org.hcjf.layers.storage.actions.*;
+import org.hcjf.layers.storage.actions.CollectionResultSet;
+import org.hcjf.layers.storage.actions.MapResultSet;
 import org.hcjf.layers.storage.actions.ResultSet;
+import org.hcjf.layers.storage.actions.Select;
 import org.hcjf.layers.storage.postgres.actions.PostgresSelect;
 import org.hcjf.layers.storage.postgres.errors.Errors;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
@@ -79,10 +81,12 @@ public class PostgresStorageSession extends StorageSession {
     }
 
     /**
-     *
-     * @param sqlResultSet
-     * @param <R>
-     * @return
+     * Creates a hcjf result set from a postgres data base result set.
+     * @param query Query instance that was evaluated for postgres engine.
+     * @param sqlResultSet Postgres result set.
+     * @param resultType Expected object to create hcjf result set.
+     * @param <R> Expected kind of result set.
+     * @return Result set instance.
      * @throws SQLException
      * @throws IllegalAccessException
      * @throws InstantiationException
@@ -97,10 +101,13 @@ public class PostgresStorageSession extends StorageSession {
             while (sqlResultSet.next()) {
                 JoinableMap mapResult = new JoinableMap();
                 for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
-                    mapResult.put(normalizeDataSourceToApplication(new Query.QueryField(
+                    Query.QueryComponent queryField = normalizeDataSourceToApplication(new Query.QueryField(
                             resultSetMetaData.getTableName(columnNumber) +
-                                    Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber))).toString(),
-                            getValueFromColumn(sqlResultSet.getObject(columnNumber)));
+                                    Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber)));
+                    if(queryField != null) {
+                        mapResult.put(queryField.toString(),
+                                getValueFromColumn(sqlResultSet.getObject(columnNumber)));
+                    }
                 }
                 collectionResult.add(mapResult);
             }
@@ -114,7 +121,7 @@ public class PostgresStorageSession extends StorageSession {
                     try {
                         int index = sqlResultSet.findColumn(
                                 normalizeApplicationToDataSource(new Query.QueryField(
-                                        resultType.getSimpleName() + Strings.CLASS_SEPARATOR + setterName)).toString());
+                                        setterName)).toString());
                         setters.get(setterName).invoke(object, getValueFromColumn(sqlResultSet.getObject(index)));
                     } catch (Exception ex){}
                 }
@@ -127,9 +134,9 @@ public class PostgresStorageSession extends StorageSession {
     }
 
     /**
-     *
-     * @param columnValue
-     * @return
+     * Mapping some kind of data type from data base to java types.
+     * @param columnValue Value from data base column.
+     * @return Java-friendly instance
      * @throws SQLException
      */
     protected Object getValueFromColumn(Object columnValue) throws SQLException {

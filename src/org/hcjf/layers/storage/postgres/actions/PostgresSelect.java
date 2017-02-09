@@ -2,19 +2,16 @@ package org.hcjf.layers.storage.postgres.actions;
 
 import org.hcjf.layers.query.*;
 import org.hcjf.layers.storage.StorageAccessException;
-import org.hcjf.layers.storage.actions.CollectionResultSet;
-import org.hcjf.layers.storage.actions.MapResultSet;
 import org.hcjf.layers.storage.actions.ResultSet;
 import org.hcjf.layers.storage.actions.Select;
 import org.hcjf.layers.storage.postgres.PostgresStorageSession;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.properties.SystemProperties;
-import org.hcjf.utils.Introspection;
 import org.hcjf.utils.Strings;
 
-import java.math.BigDecimal;
-import java.sql.*;
-import java.util.*;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -92,7 +89,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
      * @param collection Evaluator collection.
      * @return Query builder.
      */
-    private StringBuilder processEvaluators(StringBuilder result, EvaluatorCollection collection) {
+    protected StringBuilder processEvaluators(StringBuilder result, EvaluatorCollection collection) {
         String separatorValue = collection instanceof Or ?
                 SystemProperties.get(SystemProperties.Query.ReservedWord.OR) :
                 SystemProperties.get(SystemProperties.Query.ReservedWord.AND);
@@ -112,6 +109,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             } else if(evaluator instanceof FieldEvaluator) {
                 result.append(getSession().normalizeApplicationToDataSource(
                         ((FieldEvaluator)evaluator).getQueryField())).append(Strings.WHITE_SPACE);
+                int size = 0;
                 if(evaluator instanceof Distinct) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DISTINCT));
                 } else if(evaluator instanceof Equals) {
@@ -124,6 +122,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.NOT_IN));
                 } else if(evaluator instanceof In) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.IN));
+                    size = ((Collection)((FieldEvaluator)evaluator).getRawValue()).size();
                 } else if(evaluator instanceof Like) {
                     result.append(SystemProperties.get(PostgresProperties.ReservedWord.LIKE_OPERATOR));
                 } else if(evaluator instanceof SmallerThanOrEqual) {
@@ -131,7 +130,18 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 } else if(evaluator instanceof SmallerThan) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SMALLER_THAN));
                 }
-                result.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                if(size > 0) {
+                    String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
+                    String argumentSeparator = Strings.EMPTY_STRING;
+                    result.append(Strings.WHITE_SPACE).append(Strings.START_GROUP);
+                    for (int i = 0; i < size; i++) {
+                        result.append(argumentSeparator).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                        argumentSeparator = argumentSeparatorValue;
+                    }
+                    result.append(Strings.END_GROUP).append(Strings.WHITE_SPACE);
+                } else {
+                    result.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                }
             }
             addSeparator = true;
         }
@@ -146,7 +156,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
      * @param params Execution parameters.
      * @return Prepared statement.
      */
-    private PreparedStatement setValues(PreparedStatement statement, EvaluatorCollection collection, Integer index, Object... params) {
+    protected PreparedStatement setValues(PreparedStatement statement, EvaluatorCollection collection, Integer index, Object... params) {
         Object value;
         for(Evaluator evaluator : collection.getEvaluators()) {
             if(evaluator instanceof Or) {
@@ -158,6 +168,10 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     value = ((FieldEvaluator)evaluator).getValue(null,null, params);
                     if(value instanceof Date) {
                         statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
+                    } else if(Collection.class.isAssignableFrom(value.getClass())) {
+                        for(Object object : ((Collection)value)) {
+                            statement.setObject(index++, object);
+                        }
                     } else {
                         statement.setObject(index++, value);
                     }
