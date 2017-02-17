@@ -9,8 +9,10 @@ import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.properties.SystemProperties;
 import org.hcjf.utils.Strings;
 
+import java.sql.JDBCType;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLType;
 import java.util.Collection;
 import java.util.Date;
 
@@ -111,9 +113,19 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                         ((FieldEvaluator)evaluator).getQueryField())).append(Strings.WHITE_SPACE);
                 int size = 0;
                 if(evaluator instanceof Distinct) {
-                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DISTINCT));
+                    if(((FieldEvaluator)evaluator).getRawValue() == null) {
+                        result.append(SystemProperties.get(PostgresProperties.ReservedWord.IS_NOT_NULL_OPERATOR));
+                        size = -1;
+                    } else {
+                        result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DISTINCT));
+                    }
                 } else if(evaluator instanceof Equals) {
-                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.EQUALS));
+                    if(((FieldEvaluator)evaluator).getRawValue() == null) {
+                        result.append(SystemProperties.get(PostgresProperties.ReservedWord.IS_NULL_OPERATOR));
+                        size = -1;
+                    } else {
+                        result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.EQUALS));
+                    }
                 } else if(evaluator instanceof GreaterThanOrEqual) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.GREATER_THAN_OR_EQUALS));
                 } else if(evaluator instanceof GreaterThan) {
@@ -139,8 +151,10 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                         argumentSeparator = argumentSeparatorValue;
                     }
                     result.append(Strings.END_GROUP).append(Strings.WHITE_SPACE);
-                } else {
+                } else if(size == 0) {
                     result.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                } else {
+                    result.append(Strings.WHITE_SPACE);
                 }
             }
             addSeparator = true;
@@ -166,14 +180,16 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             } else if(evaluator instanceof FieldEvaluator) {
                 try {
                     value = ((FieldEvaluator)evaluator).getValue(null,null, params);
-                    if(value instanceof Date) {
-                        statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
-                    } else if(Collection.class.isAssignableFrom(value.getClass())) {
-                        for(Object object : ((Collection)value)) {
-                            statement.setObject(index++, object);
+                    if(value != null) {
+                        if (value instanceof Date) {
+                            statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
+                        } else if (Collection.class.isAssignableFrom(value.getClass())) {
+                            for (Object object : ((Collection) value)) {
+                                statement.setObject(index++, object);
+                            }
+                        } else {
+                            statement.setObject(index++, value);
                         }
-                    } else {
-                        statement.setObject(index++, value);
                     }
                 } catch (SQLException ex) {
                     throw new IllegalArgumentException(ex);

@@ -117,12 +117,14 @@ public class PostgresStorageSession extends StorageSession {
             Map<String, Introspection.Setter> setters = Introspection.getSetters(resultType);
             while (sqlResultSet.next()) {
                 Object object = resultType.newInstance();
-                for(String setterName : setters.keySet()) {
+                for (int columnNumber = 1; columnNumber <= resultSetMetaData.getColumnCount(); columnNumber++) {
                     try {
-                        int index = sqlResultSet.findColumn(
-                                normalizeApplicationToDataSource(new Query.QueryField(
-                                        setterName)).toString());
-                        setters.get(setterName).invoke(object, getValueFromColumn(sqlResultSet.getObject(index)));
+                        Query.QueryComponent queryField = normalizeDataSourceToApplication(new Query.QueryField(
+                                resultSetMetaData.getTableName(columnNumber) +
+                                        Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber)));
+                        if (queryField != null && setters.containsKey(((Query.QueryField) queryField).getFieldName())) {
+                            setters.get(((Query.QueryField) queryField).getFieldName()).invoke(object, getValueFromColumn(sqlResultSet.getObject(columnNumber)));
+                        }
                     } catch (Exception ex){}
                 }
                 collectionResult.add(object);
