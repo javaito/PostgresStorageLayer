@@ -44,7 +44,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SELECT)).append(Strings.WHITE_SPACE);
             String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
             String argumentSeparator = Strings.EMPTY_STRING;
-            for(Query.QueryField queryField : query.getReturnFields()) {
+            for(Query.QueryReturnParameter queryField : query.getReturnParameters()) {
                 queryBuilder.append(argumentSeparator);
                 queryBuilder.append(getSession().normalizeApplicationToDataSource(queryField));
                 queryBuilder.append(Strings.WHITE_SPACE);
@@ -59,13 +59,13 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 queryBuilder.append(Strings.WHITE_SPACE);
             }
 
-            if(query.getOrderFields().size() > 0) {
+            if(query.getOrderParameters().size() > 0) {
                 queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.ORDER_BY));
                 queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = Strings.EMPTY_STRING;
-                for (Query.OrderField orderField : query.getOrderFields()) {
-                    queryBuilder.append(getSession().normalizeApplicationToDataSource(orderField.getQueryField())).append(argumentSeparator).append(Strings.WHITE_SPACE);
-                    if(orderField.isDesc()) {
+                for (Query.QueryOrderParameter orderParameter: query.getOrderParameters()) {
+                    queryBuilder.append(getSession().normalizeApplicationToDataSource(orderParameter)).append(argumentSeparator).append(Strings.WHITE_SPACE);
+                    if(orderParameter.isDesc()) {
                         queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC)).append(Strings.WHITE_SPACE);
                     }
                     argumentSeparator = argumentSeparatorValue;
@@ -110,7 +110,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 result.append(Strings.END_GROUP);
             } else if(evaluator instanceof FieldEvaluator) {
                 result.append(getSession().normalizeApplicationToDataSource(
-                        ((FieldEvaluator)evaluator).getQueryField())).append(Strings.WHITE_SPACE);
+                        ((FieldEvaluator)evaluator).getQueryParameter())).append(Strings.WHITE_SPACE);
                 int size = 0;
                 if(evaluator instanceof Distinct) {
                     if(((FieldEvaluator)evaluator).getRawValue() == null) {
@@ -179,7 +179,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 statement = setValues(statement, (And)evaluator, index, params);
             } else if(evaluator instanceof FieldEvaluator) {
                 try {
-                    value = ((FieldEvaluator)evaluator).getValue(null,null, params);
+                    value = ((FieldEvaluator)evaluator).getValue(null,null,null, params);
                     if(value != null) {
                         if (value instanceof Date) {
                             statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
