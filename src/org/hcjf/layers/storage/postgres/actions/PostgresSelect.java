@@ -6,6 +6,7 @@ import org.hcjf.layers.storage.actions.ResultSet;
 import org.hcjf.layers.storage.actions.Select;
 import org.hcjf.layers.storage.postgres.PostgresStorageSession;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
+import org.hcjf.log.Log;
 import org.hcjf.properties.SystemProperties;
 import org.hcjf.utils.Strings;
 
@@ -78,6 +79,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
 
             PreparedStatement preparedStatement = getSession().getConnection().prepareStatement(queryBuilder.toString());
             preparedStatement = setValues(preparedStatement, query, 1, params);
+            Log.d(SystemProperties.get(PostgresProperties.POSTGRES_EXECUTE_STATEMENT_LOG_TAG), preparedStatement.toString());
             return getSession().createResultSet(getQuery(), preparedStatement.executeQuery(), getResultType());
         } catch (Exception ex) {
             getSession().onError(ex);
@@ -134,7 +136,11 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.NOT_IN));
                 } else if(evaluator instanceof In) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.IN));
-                    size = ((Collection)((FieldEvaluator)evaluator).getRawValue()).size();
+                    if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
+                        size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
+                    } else {
+                        size = 1;
+                    }
                 } else if(evaluator instanceof Like) {
                     result.append(SystemProperties.get(PostgresProperties.ReservedWord.LIKE_OPERATOR));
                 } else if(evaluator instanceof SmallerThanOrEqual) {
