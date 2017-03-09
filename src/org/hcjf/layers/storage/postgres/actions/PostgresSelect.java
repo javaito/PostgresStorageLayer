@@ -139,7 +139,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
                         size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
                     } else {
-                        size = 0;
+                        size = 1;
                     }
                 } else if(evaluator instanceof Like) {
                     result.append(SystemProperties.get(PostgresProperties.ReservedWord.LIKE_OPERATOR));
