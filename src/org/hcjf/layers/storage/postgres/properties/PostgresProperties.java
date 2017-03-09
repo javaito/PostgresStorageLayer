@@ -10,6 +10,7 @@ import org.hcjf.properties.SystemProperties;
 public final class PostgresProperties {
 
     public static final String POSTGRES_STORAGE_LAYER_LOG_TAG = "postgres.storage.layer.log.tag";
+    public static final String POSTGRES_EXECUTE_STATEMENT_LOG_TAG = "postgres.execute.statement.log.tag";
 
     public static class ReservedWord {
 
@@ -25,6 +26,7 @@ public final class PostgresProperties {
 
     public static void init() {
         SystemProperties.putDefaultValue(POSTGRES_STORAGE_LAYER_LOG_TAG, "Postgres");
+        SystemProperties.putDefaultValue(POSTGRES_EXECUTE_STATEMENT_LOG_TAG, "pgDB");
 
         SystemProperties.putDefaultValue(ReservedWord.LIKE_OPERATOR, "LIKE");
         SystemProperties.putDefaultValue(ReservedWord.IS_NULL_OPERATOR, "IS NULL");
