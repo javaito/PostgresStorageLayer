@@ -179,7 +179,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 statement = setValues(statement, (And)evaluator, index, params);
             } else if(evaluator instanceof FieldEvaluator) {
                 try {
-                    value = ((FieldEvaluator)evaluator).getValue(null,null,null, params);
+                    value = ((FieldEvaluator)evaluator).getValue(null,null, params);
                     if(value != null) {
                         if (value instanceof Date) {
                             statement.setDate(index++, new java.sql.Date(((Date) value).getTime()));
