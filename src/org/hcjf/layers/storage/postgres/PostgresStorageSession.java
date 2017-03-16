@@ -105,7 +105,7 @@ public class PostgresStorageSession extends StorageSession {
                             resultSetMetaData.getTableName(columnNumber) +
                                     Strings.CLASS_SEPARATOR + resultSetMetaData.getColumnLabel(columnNumber)));
                     if(queryField != null) {
-                        mapResult.put(query.getResourceName() + Strings.CLASS_SEPARATOR + queryField.toString(),
+                        mapResult.put(query.getResourceName() + Strings.CLASS_SEPARATOR + ((Query.QueryField)queryField).getFieldName(),
                                 getValueFromColumn(sqlResultSet.getObject(columnNumber)));
                     }
                 }

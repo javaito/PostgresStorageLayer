@@ -6,6 +6,7 @@ import org.hcjf.layers.storage.actions.ResultSet;
 import org.hcjf.layers.storage.actions.Select;
 import org.hcjf.layers.storage.postgres.PostgresStorageSession;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
+import org.hcjf.log.Log;
 import org.hcjf.properties.SystemProperties;
 import org.hcjf.utils.Strings;
 
@@ -44,9 +45,19 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SELECT)).append(Strings.WHITE_SPACE);
             String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
             String argumentSeparator = Strings.EMPTY_STRING;
+            Query.QueryComponent normalizedQueryField;
             for(Query.QueryReturnParameter queryField : query.getReturnParameters()) {
                 queryBuilder.append(argumentSeparator);
-                queryBuilder.append(getSession().normalizeApplicationToDataSource(queryField));
+                normalizedQueryField = getSession().normalizeApplicationToDataSource(queryField);
+                queryBuilder.append(normalizedQueryField);
+                if(normalizedQueryField instanceof Query.QueryReturnParameter &&
+                        ((Query.QueryReturnParameter)normalizedQueryField).getAlias() != null &&
+                        !((Query.QueryReturnParameter)normalizedQueryField).getAlias().isEmpty()) {
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.AS));
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    queryBuilder.append(((Query.QueryReturnParameter)normalizedQueryField).getAlias());
+                }
                 queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = argumentSeparatorValue;
             }
@@ -78,6 +89,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
 
             PreparedStatement preparedStatement = getSession().getConnection().prepareStatement(queryBuilder.toString());
             preparedStatement = setValues(preparedStatement, query, 1, params);
+            Log.d(SystemProperties.get(PostgresProperties.POSTGRES_EXECUTE_STATEMENT_LOG_TAG), preparedStatement.toString());
             return getSession().createResultSet(getQuery(), preparedStatement.executeQuery(), getResultType());
         } catch (Exception ex) {
             getSession().onError(ex);
@@ -134,7 +146,11 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.NOT_IN));
                 } else if(evaluator instanceof In) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.IN));
-                    size = ((Collection)((FieldEvaluator)evaluator).getRawValue()).size();
+                    if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
+                        size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
+                    } else {
+                        size = 1;
+                    }
                 } else if(evaluator instanceof Like) {
                     result.append(SystemProperties.get(PostgresProperties.ReservedWord.LIKE_OPERATOR));
                 } else if(evaluator instanceof SmallerThanOrEqual) {
