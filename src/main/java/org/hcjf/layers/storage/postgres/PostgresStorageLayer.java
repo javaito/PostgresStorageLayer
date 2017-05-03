@@ -1,7 +1,7 @@
 package org.hcjf.layers.storage.postgres;
 
 import org.hcjf.layers.storage.StorageLayer;
-import org.hcjf.layers.storage.postgres.errors.Errors;
+import org.hcjf.layers.storage.postgres.errors.PostgressErrors;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.log.Log;
 import org.hcjf.properties.SystemProperties;
@@ -56,8 +56,8 @@ public abstract class PostgresStorageLayer<S extends PostgresStorageSession> ext
             return getSessionInstance(getImplName(), connection);
         } catch (SQLException ex) {
             Log.e(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
-                    Errors.getError(Errors.UNABLE_TO_CREATE_CONNECTION), ex);
-            throw new RuntimeException(Errors.getError(Errors.UNABLE_TO_CREATE_CONNECTION), ex);
+                    PostgressErrors.getError(PostgressErrors.UNABLE_TO_CREATE_CONNECTION), ex);
+            throw new RuntimeException(PostgressErrors.getError(PostgressErrors.UNABLE_TO_CREATE_CONNECTION), ex);
         }
     }
 
