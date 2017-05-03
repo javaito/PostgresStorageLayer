@@ -1,5 +1,6 @@
 package org.hcjf.layers.storage.postgres;
 
+import org.hcjf.errors.Errors;
 import org.hcjf.layers.query.JoinableMap;
 import org.hcjf.layers.query.Query;
 import org.hcjf.layers.storage.StorageAccessException;
@@ -66,7 +67,7 @@ public class PostgresStorageSession extends StorageSession {
                     getConnection().rollback();
                 } catch (Exception ex) {}
                 Log.w(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
-                        PostgressErrors.getError(PostgressErrors.ROLLBACK_OPERATION), throwable);
+                        Errors.getMessage(PostgressErrors.ROLLBACK_OPERATION), throwable);
             } else {
                 try {
                     getConnection().commit();
@@ -75,8 +76,8 @@ public class PostgresStorageSession extends StorageSession {
             getConnection().close();
         } catch (SQLException ex) {
             Log.w(SystemProperties.get(PostgresProperties.POSTGRES_STORAGE_LAYER_LOG_TAG),
-                    PostgressErrors.getError(PostgressErrors.UNABLE_TO_CLOSE_CONNECTION), ex);
-            throw new IOException(PostgressErrors.getError(PostgressErrors.UNABLE_TO_CLOSE_CONNECTION), ex);
+                    Errors.getMessage(PostgressErrors.UNABLE_TO_CLOSE_CONNECTION), ex);
+            throw new IOException(Errors.getMessage(PostgressErrors.UNABLE_TO_CLOSE_CONNECTION), ex);
         }
     }
 
