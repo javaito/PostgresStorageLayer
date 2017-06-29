@@ -144,6 +144,11 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.GREATER_THAN));
                 } else if(evaluator instanceof NotIn) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.NOT_IN));
+                    if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
+                        size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
+                    } else {
+                        size = 1;
+                    }
                 } else if(evaluator instanceof In) {
                     result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.IN));
                     if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
