@@ -1,15 +1,15 @@
 package org.hcjf.layers.storage.postgres;
 
 import org.hcjf.errors.Errors;
-import org.hcjf.layers.query.JoinableMap;
-import org.hcjf.layers.query.Query;
+import org.hcjf.layers.query.*;
 import org.hcjf.layers.storage.StorageAccessException;
 import org.hcjf.layers.storage.StorageSession;
 import org.hcjf.layers.storage.actions.CollectionResultSet;
 import org.hcjf.layers.storage.actions.MapResultSet;
-import org.hcjf.layers.storage.actions.ResultSet;
 import org.hcjf.layers.storage.actions.Select;
+import org.hcjf.layers.storage.actions.Update;
 import org.hcjf.layers.storage.postgres.actions.PostgresSelect;
+import org.hcjf.layers.storage.postgres.actions.PostgresUpdate;
 import org.hcjf.layers.storage.postgres.errors.PostgressErrors;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.log.Log;
@@ -92,7 +92,7 @@ public class PostgresStorageSession extends StorageSession {
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    public <R extends ResultSet> R createResultSet(Query query, java.sql.ResultSet sqlResultSet, Class resultType)
+    public <R extends org.hcjf.layers.storage.actions.ResultSet> R createResultSet(Query query, java.sql.ResultSet sqlResultSet, Class resultType)
             throws SQLException, IllegalAccessException, InstantiationException {
         ResultSetMetaData resultSetMetaData = sqlResultSet.getMetaData();
         R resultSet = null;
@@ -157,6 +157,129 @@ public class PostgresStorageSession extends StorageSession {
     }
 
     /**
+     * Put into the query builder all the restrictions based on collection evaluator.
+     * @param result Query builder.
+     * @param collection Evaluator collection.
+     * @return Query builder.
+     */
+    public StringBuilder processEvaluators(StringBuilder result, EvaluatorCollection collection) {
+        String separatorValue = collection instanceof Or ?
+                SystemProperties.get(SystemProperties.Query.ReservedWord.OR) :
+                SystemProperties.get(SystemProperties.Query.ReservedWord.AND);
+        boolean addSeparator = false;
+        for(Evaluator evaluator : collection.getEvaluators()) {
+            if(addSeparator) {
+                result.append(Strings.WHITE_SPACE).append(separatorValue).append(Strings.WHITE_SPACE);
+            }
+            if(evaluator instanceof Or) {
+                result.append(Strings.START_GROUP);
+                processEvaluators(result, (Or)evaluator);
+                result.append(Strings.END_GROUP);
+            } else if(evaluator instanceof And) {
+                result.append(Strings.START_GROUP);
+                processEvaluators(result, (And)evaluator);
+                result.append(Strings.END_GROUP);
+            } else if(evaluator instanceof FieldEvaluator) {
+                result.append(normalizeApplicationToDataSource(
+                        ((FieldEvaluator)evaluator).getQueryParameter())).append(Strings.WHITE_SPACE);
+                int size = 0;
+                if(evaluator instanceof Distinct) {
+                    if(((FieldEvaluator)evaluator).getRawValue() == null) {
+                        result.append(SystemProperties.get(PostgresProperties.ReservedWord.IS_NOT_NULL_OPERATOR));
+                        size = -1;
+                    } else {
+                        result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DISTINCT));
+                    }
+                } else if(evaluator instanceof Equals) {
+                    if(((FieldEvaluator)evaluator).getRawValue() == null) {
+                        result.append(SystemProperties.get(PostgresProperties.ReservedWord.IS_NULL_OPERATOR));
+                        size = -1;
+                    } else {
+                        result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.EQUALS));
+                    }
+                } else if(evaluator instanceof GreaterThanOrEqual) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.GREATER_THAN_OR_EQUALS));
+                } else if(evaluator instanceof GreaterThan) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.GREATER_THAN));
+                } else if(evaluator instanceof NotIn) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.NOT_IN));
+                    if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
+                        size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
+                    } else {
+                        size = 1;
+                    }
+                } else if(evaluator instanceof In) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.IN));
+                    if(((FieldEvaluator)evaluator).getRawValue() instanceof Collection) {
+                        size = ((Collection) ((FieldEvaluator) evaluator).getRawValue()).size();
+                    } else {
+                        size = 1;
+                    }
+                } else if(evaluator instanceof Like) {
+                    result.append(SystemProperties.get(PostgresProperties.ReservedWord.LIKE_OPERATOR));
+                } else if(evaluator instanceof SmallerThanOrEqual) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SMALLER_THAN_OR_EQUALS));
+                } else if(evaluator instanceof SmallerThan) {
+                    result.append(SystemProperties.get(SystemProperties.Query.ReservedWord.SMALLER_THAN));
+                }
+                if(size > 0) {
+                    String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
+                    String argumentSeparator = Strings.EMPTY_STRING;
+                    result.append(Strings.WHITE_SPACE).append(Strings.START_GROUP);
+                    for (int i = 0; i < size; i++) {
+                        result.append(argumentSeparator).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                        argumentSeparator = argumentSeparatorValue;
+                    }
+                    result.append(Strings.END_GROUP).append(Strings.WHITE_SPACE);
+                } else if(size == 0) {
+                    result.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.REPLACEABLE_VALUE));
+                } else {
+                    result.append(Strings.WHITE_SPACE);
+                }
+            }
+            addSeparator = true;
+        }
+        return result;
+    }
+
+    /**
+     * Set the values for the prepared statement.
+     * @param statement Prepared statement.
+     * @param collection Evaluator collection.
+     * @param index Starting index of the parameters.
+     * @param params Execution parameters.
+     * @return Prepared statement.
+     */
+    public PreparedStatement setValues(PreparedStatement statement, EvaluatorCollection collection, Integer index, Object... params) {
+        Object value;
+        for(Evaluator evaluator : collection.getEvaluators()) {
+            if(evaluator instanceof Or) {
+                statement = setValues(statement, (Or)evaluator, index, params);
+            } else if(evaluator instanceof And) {
+                statement = setValues(statement, (And)evaluator, index, params);
+            } else if(evaluator instanceof FieldEvaluator) {
+                try {
+                    value = ((FieldEvaluator)evaluator).getValue(null,null, params);
+                    if(value != null) {
+                        if (value instanceof Date) {
+                            statement.setTimestamp(index++, new java.sql.Timestamp(((Date) value).getTime()));
+                        } else if (Collection.class.isAssignableFrom(value.getClass())) {
+                            for (Object object : ((Collection) value)) {
+                                statement.setObject(index++, object);
+                            }
+                        } else {
+                            statement.setObject(index++, value);
+                        }
+                    }
+                } catch (SQLException ex) {
+                    throw new IllegalArgumentException(ex);
+                }
+            }
+        }
+        return statement;
+    }
+
+    /**
      * Return the select (postgres implementation) instance associated to the query parameter.
      * @param query Query parameter.
      * @return Select instance.
@@ -169,4 +292,20 @@ public class PostgresStorageSession extends StorageSession {
         return select;
     }
 
+    /**
+     * Returns the update operation implementation.
+     * @param query Query to filter the update.
+     * @param values Values to be updated.
+     * @return update operation.
+     * @throws StorageAccessException
+     */
+    @Override
+    public Update update(Query query, Map<String, Object> values) throws StorageAccessException {
+        PostgresUpdate update = new PostgresUpdate(this);
+        update.setQuery(query);
+        for(String key : values.keySet()) {
+            update.add(key, values.get(key));
+        }
+        return update;
+    }
 }
