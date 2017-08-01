@@ -20,7 +20,6 @@ import java.util.Date;
 /**
  * Select implementation for postgres database.
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public class PostgresSelect extends Select<PostgresStorageSession> {
 

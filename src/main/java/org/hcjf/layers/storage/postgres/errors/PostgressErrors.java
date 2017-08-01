@@ -5,7 +5,6 @@ import org.hcjf.utils.Messages;
 
 /**
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public class PostgressErrors {
 

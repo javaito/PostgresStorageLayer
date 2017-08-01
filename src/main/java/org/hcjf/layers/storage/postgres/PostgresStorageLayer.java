@@ -14,7 +14,6 @@ import java.sql.SQLException;
 /**
  * Base layer to create a pooling connection with a postgres data base engine.
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public abstract class PostgresStorageLayer<S extends PostgresStorageSession> extends StorageLayer<S> {
 

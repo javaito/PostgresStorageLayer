@@ -26,7 +26,6 @@ import java.util.Date;
 /**
  * This class implements the postgres session.
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public class PostgresStorageSession extends StorageSession {
 

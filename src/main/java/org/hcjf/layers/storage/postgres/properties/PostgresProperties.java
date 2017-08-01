@@ -1,11 +1,9 @@
 package org.hcjf.layers.storage.postgres.properties;
 
-import org.hcjf.io.net.http.HttpHeader;
 import org.hcjf.properties.SystemProperties;
 
 /**
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public final class PostgresProperties {
 

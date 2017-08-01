@@ -14,7 +14,6 @@ import java.util.*;
 
 /**
  * @author Javier Quiroga.
- * @email javier.quiroga@sitrack.com
  */
 public class PostgresUpdate extends Update<PostgresStorageSession> {
 
