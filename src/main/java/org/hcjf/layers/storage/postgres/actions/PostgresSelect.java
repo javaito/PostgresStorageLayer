@@ -45,20 +45,25 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             String argumentSeparatorValue = SystemProperties.get(SystemProperties.Query.ReservedWord.ARGUMENT_SEPARATOR);
             String argumentSeparator = Strings.EMPTY_STRING;
             Query.QueryComponent normalizedQueryField;
-            for(Query.QueryReturnParameter queryField : query.getReturnParameters()) {
-                queryBuilder.append(argumentSeparator);
-                normalizedQueryField = getSession().normalizeApplicationToDataSource(queryField);
-                queryBuilder.append(normalizedQueryField);
-                if(normalizedQueryField instanceof Query.QueryReturnParameter &&
-                        ((Query.QueryReturnParameter)normalizedQueryField).getAlias() != null &&
-                        !((Query.QueryReturnParameter)normalizedQueryField).getAlias().isEmpty()) {
+            if(!query.returnAll()) {
+                for (Query.QueryReturnParameter queryField : query.getReturnParameters()) {
+                    queryBuilder.append(argumentSeparator);
+                    normalizedQueryField = getSession().normalizeApplicationToDataSource(queryField);
+                    queryBuilder.append(normalizedQueryField);
+                    if (normalizedQueryField instanceof Query.QueryReturnParameter &&
+                            ((Query.QueryReturnParameter) normalizedQueryField).getAlias() != null &&
+                            !((Query.QueryReturnParameter) normalizedQueryField).getAlias().isEmpty()) {
+                        queryBuilder.append(Strings.WHITE_SPACE);
+                        queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.AS));
+                        queryBuilder.append(Strings.WHITE_SPACE);
+                        queryBuilder.append(((Query.QueryReturnParameter) normalizedQueryField).getAlias());
+                    }
                     queryBuilder.append(Strings.WHITE_SPACE);
-                    queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.AS));
-                    queryBuilder.append(Strings.WHITE_SPACE);
-                    queryBuilder.append(((Query.QueryReturnParameter)normalizedQueryField).getAlias());
+                    argumentSeparator = argumentSeparatorValue;
                 }
+            } else {
+                queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.RETURN_ALL));
                 queryBuilder.append(Strings.WHITE_SPACE);
-                argumentSeparator = argumentSeparatorValue;
             }
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.FROM)).append(Strings.WHITE_SPACE);
             queryBuilder.append(getSession().normalizeApplicationToDataSource(query.getResource())).append(Strings.WHITE_SPACE);
