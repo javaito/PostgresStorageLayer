@@ -19,7 +19,7 @@ import java.util.Date;
 
 /**
  * Select implementation for postgres database.
- * @author Javier Quiroga.
+ * @author javaito.
  */
 public class PostgresSelect extends Select<PostgresStorageSession> {
 
@@ -62,6 +62,41 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             }
             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.FROM)).append(Strings.WHITE_SPACE);
             queryBuilder.append(getSession().normalizeApplicationToDataSource(query.getResource())).append(Strings.WHITE_SPACE);
+
+            if (query.getJoins() != null && query.getJoins().size() > 0) {
+                for (Join join : query.getJoins()) {
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    switch(join.getType()) {
+                        case JOIN:
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.JOIN));
+                            break;
+                        case LEFT:
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.LEFT));
+                            queryBuilder.append(Strings.WHITE_SPACE);
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.JOIN));
+                            break;
+                        case RIGHT:
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.RIGHT));
+                            queryBuilder.append(Strings.WHITE_SPACE);
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.JOIN));
+                            break;
+                        case INNER:
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.INNER));
+                            queryBuilder.append(Strings.WHITE_SPACE);
+                            queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.JOIN));
+                            break;
+                    }
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    queryBuilder.append(join.getResourceName());
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.ON));
+                    queryBuilder.append(Strings.WHITE_SPACE);
+                    queryBuilder.append(join.getLeftField().getCompleteFieldName());
+                    queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.EQUALS));
+                    queryBuilder.append(join.getRightField().getCompleteFieldName());
+                }
+            }
+
             if(query.getEvaluators().size() > 0) {
                 queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.WHERE));
                 queryBuilder.append(Strings.WHITE_SPACE);
