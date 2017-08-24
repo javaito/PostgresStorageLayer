@@ -70,7 +70,6 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
 
             if (query.getJoins() != null && query.getJoins().size() > 0) {
                 for (Join join : query.getJoins()) {
-                    queryBuilder.append(Strings.WHITE_SPACE);
                     switch(join.getType()) {
                         case JOIN:
                             queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.JOIN));
@@ -99,6 +98,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     queryBuilder.append(join.getLeftField().getCompleteFieldName());
                     queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.EQUALS));
                     queryBuilder.append(join.getRightField().getCompleteFieldName());
+                    queryBuilder.append(Strings.WHITE_SPACE);
                 }
             }
 
