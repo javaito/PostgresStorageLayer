@@ -114,11 +114,12 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = Strings.EMPTY_STRING;
                 for (Query.QueryOrderParameter orderParameter: query.getOrderParameters()) {
-                    queryBuilder.append(getSession().normalizeApplicationToDataSource(orderParameter)).append(argumentSeparator).append(Strings.WHITE_SPACE);
+                    queryBuilder.append(argumentSeparator);
+                    queryBuilder.append(getSession().normalizeApplicationToDataSource(orderParameter));
                     if(orderParameter.isDesc()) {
-                        queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC)).append(Strings.WHITE_SPACE);
+                        queryBuilder.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC));
                     }
-                    argumentSeparator = argumentSeparatorValue;
+                    argumentSeparator = argumentSeparatorValue + Strings.WHITE_SPACE;
                 }
             }
 
