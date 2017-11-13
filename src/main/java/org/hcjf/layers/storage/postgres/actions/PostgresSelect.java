@@ -127,7 +127,7 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                     if(orderParameter.isDesc()) {
                         queryBuilder.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC));
                     }
-                    argumentSeparator = argumentSeparatorValue;
+                    argumentSeparator = argumentSeparatorValue + Strings.WHITE_SPACE;
                 }
                 queryBuilder.append(Strings.WHITE_SPACE);
             }
