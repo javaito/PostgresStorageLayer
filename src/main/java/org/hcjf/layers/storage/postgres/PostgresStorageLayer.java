@@ -1,13 +1,15 @@
 package org.hcjf.layers.storage.postgres;
 
+import com.zaxxer.hikari.HikariConfig;
 import org.hcjf.errors.Errors;
 import org.hcjf.layers.storage.StorageLayer;
 import org.hcjf.layers.storage.postgres.errors.PostgressErrors;
 import org.hcjf.layers.storage.postgres.properties.PostgresProperties;
 import org.hcjf.log.Log;
 import org.hcjf.properties.SystemProperties;
-import org.postgresql.ds.PGPoolingDataSource;
+import org.postgresql.ds.PGSimpleDataSource;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -17,7 +19,7 @@ import java.sql.SQLException;
  */
 public abstract class PostgresStorageLayer<S extends PostgresStorageSession> extends StorageLayer<S> {
 
-    private PGPoolingDataSource source;
+    private DataSource source;
 
     public PostgresStorageLayer(String implName) {
         super(implName);
@@ -32,15 +34,21 @@ public abstract class PostgresStorageLayer<S extends PostgresStorageSession> ext
     public S begin() {
         synchronized (this) {
             if(source == null) {
-                source = new PGPoolingDataSource();
-                source.setDataSourceName(getDataSourceName());
-                source.setServerName(getServerName());
-                source.setDatabaseName(getDatabaseName());
-                source.setUser(getUserName());
-                source.setPassword(getPassword());
-                source.setInitialConnections(getInitialConnections());
-                source.setMaxConnections(getMaxConnections());
-                source.setPortNumber(getPortNumber());
+
+                HikariConfig hikariConfig = new HikariConfig();
+                hikariConfig.setDataSourceClassName(PGSimpleDataSource.class.getName());
+                hikariConfig.addDataSourceProperty(SystemProperties.get(PostgresProperties.Pool.SERVER_NAME_FIELD), getServerName());
+                hikariConfig.addDataSourceProperty(SystemProperties.get(PostgresProperties.Pool.DATABASE_NAME_FIELD), getDatabaseName());
+                hikariConfig.addDataSourceProperty(SystemProperties.get(PostgresProperties.Pool.USER_FIELD), getUserName());
+                hikariConfig.addDataSourceProperty(SystemProperties.get(PostgresProperties.Pool.PASSWORD_FIELD), getPassword());
+                hikariConfig.addDataSourceProperty(SystemProperties.get(PostgresProperties.Pool.PORT_NUMBER_FIELD), getPortNumber());
+                hikariConfig.setPoolName(getDataSourceName());
+                hikariConfig.setMaximumPoolSize(getMaxConnections());
+                hikariConfig.setMinimumIdle(getInitialConnections());
+                hikariConfig.setIdleTimeout(getIdleTimeout());
+                hikariConfig.setMaxLifetime(getMaxLifeTime());
+
+                source = hikariConfig.getDataSource();
 
                 try {
                     Connection connection = source.getConnection();
@@ -97,18 +105,30 @@ public abstract class PostgresStorageLayer<S extends PostgresStorageSession> ext
      * Return the initial connection size for the pool.
      * @return Initial connection size.
      */
-    protected abstract Integer getInitialConnections();
+    protected Integer getInitialConnections() {
+        return SystemProperties.getInteger(PostgresProperties.Pool.INIT_CONNECTIONS);
+    }
 
     /**
      * Return the max connection size for the pool.
      * @return Max connection size.
      */
-    protected abstract Integer getMaxConnections();
+    protected Integer getMaxConnections() {
+        return SystemProperties.getInteger(PostgresProperties.Pool.MAX_CONNECTIONS);
+    }
 
     /**
      * Return the port number of the server.
      * @return Port number.
      */
     protected abstract Integer getPortNumber();
+
+    protected Long getIdleTimeout() {
+        return SystemProperties.getLong(PostgresProperties.Pool.IDLE_TIMEOUT);
+    }
+
+    protected Long getMaxLifeTime() {
+        return SystemProperties.getLong(PostgresProperties.Pool.MAX_LIFE_TIME);
+    }
 
 }
