@@ -1,6 +1,7 @@
 package org.hcjf.layers.storage.postgres;
 
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.hcjf.errors.Errors;
 import org.hcjf.layers.storage.StorageLayer;
 import org.hcjf.layers.storage.postgres.errors.PostgressErrors;
@@ -48,7 +49,7 @@ public abstract class PostgresStorageLayer<S extends PostgresStorageSession> ext
                 hikariConfig.setIdleTimeout(getIdleTimeout());
                 hikariConfig.setMaxLifetime(getMaxLifeTime());
 
-                source = hikariConfig.getDataSource();
+                source = new HikariDataSource(hikariConfig);
 
                 try {
                     Connection connection = source.getConnection();

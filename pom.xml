@@ -7,7 +7,7 @@
     <name>HCJF Postgres Storage Layer</name>
     <groupId>com.github.javaito</groupId>
     <artifactId>hcjf-postgres-storage-layer</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <packaging>jar</packaging>
     <description>Holanda Catalina Storage layer implementation for postgres data base</description>
     <url>https://github.com/javaito/PostgresStorageLayer</url>
