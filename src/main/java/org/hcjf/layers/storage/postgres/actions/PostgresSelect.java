@@ -124,7 +124,8 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
             }
 
             if(query.getLimit() != null) {
-                queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.LIMIT)).append(Strings.WHITE_SPACE).append(query.getLimit());
+                queryBuilder.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.LIMIT)).
+                        append(Strings.WHITE_SPACE).append(query.getLimit());
             }
 
             PreparedStatement preparedStatement = getSession().getConnection().prepareStatement(queryBuilder.toString());
