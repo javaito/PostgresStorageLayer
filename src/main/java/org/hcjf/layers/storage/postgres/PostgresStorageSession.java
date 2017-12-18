@@ -4,10 +4,8 @@ import org.hcjf.errors.Errors;
 import org.hcjf.layers.query.*;
 import org.hcjf.layers.storage.StorageAccessException;
 import org.hcjf.layers.storage.StorageSession;
-import org.hcjf.layers.storage.actions.CollectionResultSet;
-import org.hcjf.layers.storage.actions.MapResultSet;
-import org.hcjf.layers.storage.actions.Select;
-import org.hcjf.layers.storage.actions.Update;
+import org.hcjf.layers.storage.actions.*;
+import org.hcjf.layers.storage.postgres.actions.PostgresInsert;
 import org.hcjf.layers.storage.postgres.actions.PostgresSelect;
 import org.hcjf.layers.storage.postgres.actions.PostgresUpdate;
 import org.hcjf.layers.storage.postgres.errors.PostgressErrors;
@@ -20,6 +18,7 @@ import org.hcjf.utils.Strings;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.Date;
 
@@ -306,5 +305,15 @@ public class PostgresStorageSession extends StorageSession {
             update.add(key, values.get(key));
         }
         return update;
+    }
+
+    /**
+     * Returns the insert operation implementation
+     * @return insert query
+     * @throws StorageAccessException
+     */
+    @Override
+    public Insert insert() throws StorageAccessException {
+        return new PostgresInsert(this);
     }
 }
