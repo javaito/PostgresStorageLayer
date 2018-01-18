@@ -109,18 +109,27 @@ public class PostgresSelect extends Select<PostgresStorageSession> {
                 queryBuilder.append(Strings.WHITE_SPACE);
             }
 
+            if(query.getGroupParameters().size() > 0) {
+                queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.GROUP_BY));
+                argumentSeparator = Strings.EMPTY_STRING;
+                for (Query.QueryReturnParameter groupParameter: query.getGroupParameters()) {
+                    queryBuilder.append(argumentSeparator).append(Strings.WHITE_SPACE).append(getSession().normalizeApplicationToDataSource(groupParameter));
+                    argumentSeparator = argumentSeparatorValue;
+                }
+                queryBuilder.append(Strings.WHITE_SPACE);
+            }
+
             if(query.getOrderParameters().size() > 0) {
                 queryBuilder.append(SystemProperties.get(SystemProperties.Query.ReservedWord.ORDER_BY));
-                queryBuilder.append(Strings.WHITE_SPACE);
                 argumentSeparator = Strings.EMPTY_STRING;
                 for (Query.QueryOrderParameter orderParameter: query.getOrderParameters()) {
-                    queryBuilder.append(argumentSeparator);
-                    queryBuilder.append(getSession().normalizeApplicationToDataSource(orderParameter));
+                    queryBuilder.append(argumentSeparator).append(Strings.WHITE_SPACE).append(getSession().normalizeApplicationToDataSource(orderParameter));
                     if(orderParameter.isDesc()) {
                         queryBuilder.append(Strings.WHITE_SPACE).append(SystemProperties.get(SystemProperties.Query.ReservedWord.DESC));
                     }
                     argumentSeparator = argumentSeparatorValue + Strings.WHITE_SPACE;
                 }
+                queryBuilder.append(Strings.WHITE_SPACE);
             }
 
             if(query.getLimit() != null) {

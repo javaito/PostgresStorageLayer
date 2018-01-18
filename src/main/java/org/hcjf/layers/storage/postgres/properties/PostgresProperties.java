@@ -38,7 +38,7 @@ public final class PostgresProperties {
         SystemProperties.putDefaultValue(POSTGRES_STORAGE_LAYER_LOG_TAG, "Postgres");
         SystemProperties.putDefaultValue(POSTGRES_EXECUTE_STATEMENT_LOG_TAG, "pgDB");
 
-        SystemProperties.putDefaultValue(ReservedWord.LIKE_OPERATOR, "LIKE");
+        SystemProperties.putDefaultValue(ReservedWord.LIKE_OPERATOR, "ILIKE");
         SystemProperties.putDefaultValue(ReservedWord.IS_NULL_OPERATOR, "IS NULL");
         SystemProperties.putDefaultValue(ReservedWord.IS_NOT_NULL_OPERATOR, "IS NOT NULL");
 
